@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>事故シナリオ対策マップ（仮）</title>
+<style>
+  :root{
+    --ink:#11161d; --paper:#f4f1ea; --line:#c9c2b4;
+    --accent:#0b4f8a; --accent2:#1276c4; --event:#7a1f1f;
+    --none:#c0392b; --weak:#e07b1a; --partial:#d6b80a; --ok:#2f8f4e;
+    --box:#ffffff; --muted:#5b6470;
+    font-synthesis:none;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:
+      repeating-linear-gradient(0deg, rgba(11,79,138,.035) 0 1px, transparent 1px 26px),
+      repeating-linear-gradient(90deg, rgba(11,79,138,.035) 0 1px, transparent 1px 26px),
+      var(--paper);
+    color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic Medium","Yu Gothic","Noto Sans JP",Meiryo,sans-serif;
+    -webkit-font-smoothing:antialiased; display:flex; flex-direction:column;
+  }
+  header{background:var(--ink);color:#f4f1ea;padding:12px 18px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;border-bottom:3px solid var(--accent2);}
+  header .brand{display:flex;flex-direction:column;line-height:1.1;}
+  header .brand b{font-size:18px;letter-spacing:.04em;}
+  header .brand span{font-size:11px;color:#9fb4c8;letter-spacing:.18em;}
+  header .spacer{flex:1;}
+  .ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  select,button,input[type=text]{font-family:inherit;font-size:13px;}
+  select{background:#1e2730;color:#eef3f7;border:1px solid #38444f;border-radius:6px;padding:7px 10px;max-width:280px;}
+  .btn{background:#1e2730;color:#eef3f7;border:1px solid #38444f;border-radius:6px;padding:7px 12px;cursor:pointer;transition:.15s;white-space:nowrap;}
+  .btn:hover{background:var(--accent);border-color:var(--accent2);}
+  .btn.primary{background:var(--accent2);border-color:var(--accent2);}
+  .btn.primary:hover{background:var(--accent);}
+
+  .legend{display:flex;gap:14px;align-items:center;padding:8px 18px;font-size:12px;background:#ece7dc;border-bottom:1px solid var(--line);flex-wrap:wrap;color:var(--muted);}
+  .legend .chip{display:inline-flex;gap:6px;align-items:center;}
+  .swatch{width:14px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,.2);}
+  .legend .hint{margin-left:auto;color:#8a7f6c;}
+
+  .meta{display:flex;gap:18px;padding:10px 18px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line);background:#f7f4ec;font-size:13px;}
+  .meta label{color:var(--muted);margin-right:6px;}
+  .meta .field{display:flex;align-items:center;}
+  .meta input{border:1px solid var(--line);border-radius:5px;padding:5px 8px;background:#fff;min-width:150px;}
+
+  /* event tabs */
+  .tabs{display:flex;gap:6px;align-items:center;padding:10px 18px 0;flex-wrap:wrap;background:#f7f4ec;}
+  .tab{display:inline-flex;align-items:center;gap:7px;background:#e7e0d2;border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;padding:7px 12px;font-size:12.5px;cursor:pointer;color:var(--muted);max-width:230px;}
+  .tab.active{background:var(--box);color:var(--ink);font-weight:700;border-color:var(--ink);box-shadow:0 -2px 0 var(--accent2) inset;}
+  .tab .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;}
+  .tab .x{font-size:12px;color:#999;border-radius:50%;width:16px;height:16px;line-height:14px;text-align:center;}
+  .tab .x:hover{background:#d8cfbe;color:#c0392b;}
+  .tab.add{background:rgba(18,118,196,.08);border:1px dashed var(--accent2);color:var(--accent);border-radius:8px;}
+
+  .scroller{flex:1;overflow:auto;padding:8px 22px 60px;background:#fff;}
+  .canvas{position:relative;min-width:1040px;margin:0 auto;padding-top:18px;}
+  svg.links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;}
+
+  .grid{display:grid;grid-template-columns:1fr 200px 1fr;gap:30px;align-items:center;position:relative;z-index:2;}
+  .colhead{grid-column:1/4;display:grid;grid-template-columns:1fr 200px 1fr;gap:30px;font-size:11.5px;letter-spacing:.04em;color:var(--muted);margin-bottom:4px;}
+  .colhead b{font-weight:700;color:var(--ink);}
+  .colhead .l{text-align:left;} .colhead .c{text-align:center;} .colhead .r{text-align:right;}
+
+  .side{display:flex;flex-direction:column;gap:22px;}
+  .right.side{align-items:flex-end;}
+  .row{display:flex;align-items:center;width:100%;}
+  .right .row{justify-content:flex-start;}
+
+  .node{background:var(--box);border:1.5px solid var(--ink);border-radius:8px;padding:9px 11px;min-width:120px;max-width:190px;font-size:13px;line-height:1.35;box-shadow:2px 3px 0 rgba(17,22,29,.12);position:relative;}
+  .node[contenteditable]{outline:none;}
+  .node:focus-within,.node[contenteditable]:focus{border-color:var(--accent2);box-shadow:2px 3px 0 rgba(18,118,196,.25);}
+  .node .tag{position:absolute;top:-9px;left:9px;font-size:9px;letter-spacing:.06em;background:var(--ink);color:#fff;padding:1px 6px;border-radius:3px;}
+  .node .del{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:50%;background:#fff;border:1.5px solid var(--ink);color:var(--ink);font-size:12px;line-height:14px;text-align:center;cursor:pointer;opacity:0;transition:.12s;}
+  .row:hover .node .del,.barrier:hover .del{opacity:1;}
+
+  .barrier{border-radius:8px;padding:8px 10px 26px;min-width:112px;max-width:160px;font-size:12.5px;line-height:1.3;background:#fff;position:relative;border:1.5px solid;}
+  .barrier .tag{position:absolute;top:-9px;left:9px;font-size:9px;letter-spacing:.06em;background:#3b4654;color:#fff;padding:1px 6px;border-radius:3px;}
+  .barrier .lvl{position:absolute;bottom:5px;left:6px;right:6px;font-size:11px;font-weight:700;border:none;border-radius:4px;padding:3px 0;text-align:center;cursor:pointer;color:#fff;}
+  .lvl-none{border-color:var(--none);} .lvl-none .lvl{background:var(--none);}
+  .lvl-weak{border-color:var(--weak);} .lvl-weak .lvl{background:var(--weak);}
+  .lvl-partial{border-color:var(--partial);} .lvl-partial .lvl{background:var(--partial);color:#3a2f00;}
+  .lvl-ok{border-color:var(--ok);} .lvl-ok .lvl{background:var(--ok);}
+
+  .conn{flex:0 0 34px;height:40px;position:relative;display:flex;align-items:center;justify-content:center;}
+  .conn .arrow{width:100%;height:2px;background:var(--ink);position:relative;}
+  .conn .arrow:after{content:"";position:absolute;right:-1px;top:-4px;border-left:8px solid var(--ink);border-top:5px solid transparent;border-bottom:5px solid transparent;}
+  .conn .add{position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;border:1.5px dashed var(--accent2);color:var(--accent2);font-size:13px;line-height:15px;text-align:center;cursor:pointer;opacity:.3;transition:.12s;}
+  .conn:hover .add{opacity:1;}
+
+  .event{background:var(--event);color:#fff;border:none;border-radius:10px;padding:16px 12px;text-align:center;font-weight:700;font-size:14px;line-height:1.35;box-shadow:3px 4px 0 rgba(122,31,31,.3);min-height:90px;display:flex;align-items:center;justify-content:center;position:relative;outline:none;}
+  .event .tag{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#fff;color:var(--event);font-size:9px;letter-spacing:.1em;padding:2px 8px;border-radius:4px;}
+  .src{grid-column:2;text-align:center;margin-top:8px;}
+  .src input{border:1px dashed var(--line);border-radius:5px;padding:4px 6px;font-size:11px;background:#fbfaf6;width:190px;color:var(--muted);}
+
+  .addrow{border:1.5px dashed var(--accent2);color:var(--accent);background:rgba(18,118,196,.05);border-radius:8px;padding:8px 12px;font-size:12.5px;cursor:pointer;align-self:flex-start;}
+  .right .addrow{align-self:flex-end;}
+  .addrow:hover{background:rgba(18,118,196,.13);}
+
+  .summary{margin:26px auto 0;max-width:1040px;background:#faf8f3;border:1.5px solid var(--ink);border-radius:10px;padding:16px 18px;box-shadow:2px 3px 0 rgba(17,22,29,.1);}
+  .summary h3{margin:0 0 4px;font-size:15px;}
+  .summary .sub{font-size:12px;color:var(--muted);margin-bottom:12px;}
+  .gaplist{display:flex;flex-direction:column;gap:7px;}
+  .gapitem{display:flex;gap:10px;align-items:flex-start;font-size:13px;padding:7px 10px;border-radius:6px;background:#fff;border-left:4px solid var(--line);}
+  .gapitem.sev-none{border-left-color:var(--none);} .gapitem.sev-weak{border-left-color:var(--weak);}
+  .gapitem.sev-bare{border-left-color:#7a1f1f;background:#fbeceb;}
+  .gapitem .badge{font-size:10px;font-weight:700;color:#fff;padding:2px 7px;border-radius:4px;white-space:nowrap;margin-top:1px;}
+  .badge.b-none{background:var(--none);} .badge.b-weak{background:var(--weak);} .badge.b-bare{background:#7a1f1f;}
+  .gapitem .where{color:var(--muted);font-size:11.5px;}
+  .allgood{color:var(--ok);font-weight:700;font-size:13px;}
+  .prio{margin-top:16px;border-top:1px solid var(--line);padding-top:12px;}
+  .prio h4{margin:0 0 8px;font-size:13.5px;color:var(--accent);}
+  .prio ol{margin:0;padding-left:20px;}
+  .prio li{font-size:13px;margin-bottom:5px;line-height:1.45;}
+  .disc{font-size:11px;color:#a4582a;background:#fdf3ea;border:1px solid #f0d3b5;border-radius:6px;padding:7px 9px;margin-top:10px;line-height:1.5;}
+  .note{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.5;border-top:1px dashed var(--line);padding-top:10px;}
+
+  @media print{.addrow,.node .del,.conn .add,.tab.add,.tab .x{display:none!important;} body{background:#fff;}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><b>事故シナリオ対策マップ</b><span>BOW-TIE LITE FOR OSH</span></div>
+  <a href="index.html" style="color:#9fb4c8;font-size:12px;text-decoration:none;white-space:nowrap;">← 入口</a>
+  <div class="spacer"></div>
+  <div class="ctrl">
+    <select id="preset"><option value="">＋ プリセットを事象タブとして追加</option></select>
+    <button class="btn" id="newBtn">新規</button>
+    <button class="btn" id="saveBtn">保存(JSON)</button>
+    <button class="btn" id="loadBtn">読込(JSON)</button>
+    <button class="btn primary" id="printBtn">印刷 / PDF</button>
+    <input type="file" id="fileInput" accept="application/json" style="display:none">
+  </div>
+</header>
+
+<div class="legend">
+  <span>対策（バリア）の信頼度：</span>
+  <span class="chip"><span class="swatch" style="background:var(--ok)"></span>有効</span>
+  <span class="chip"><span class="swatch" style="background:var(--partial)"></span>一部有効</span>
+  <span class="chip"><span class="swatch" style="background:var(--weak)"></span>脆弱</span>
+  <span class="chip"><span class="swatch" style="background:var(--none)"></span>欠落（無い）</span>
+  <span class="hint">色をクリックで信頼度切替／文字は直接編集／流れは左→右</span>
+</div>
+
+<div class="meta">
+  <span class="field"><label>業種・現場</label><input id="m-industry" type="text" placeholder="例：上下水道メンテナンス"></span>
+  <span class="field"><label>作業</label><input id="m-task" type="text" placeholder="例：汚水槽の清掃"></span>
+  <span class="field" style="flex:1;min-width:220px;"><label>メモ</label><input id="m-notes" type="text" placeholder="気づき・対象設備など" style="flex:1;width:100%;"></span>
+</div>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="scroller">
+  <div class="canvas" id="canvas">
+    <svg class="links" id="links"></svg>
+    <div class="colhead">
+      <div class="l"><b>脅威・原因</b>　→　予防の対策</div>
+      <div class="c"><b>事故事象</b></div>
+      <div class="r">軽減の対策　→　<b>結果・被害</b>（右ほど拡大）</div>
+    </div>
+    <div class="grid">
+      <div class="side left" id="leftSide"></div>
+      <div class="center" id="centerCol"></div>
+      <div class="side right" id="rightSide"></div>
+      <div class="src"><label style="font-size:11px;color:var(--muted);">出典：</label><input id="src" type="text" placeholder="DB名／事例タイトル（リンクなし）"></div>
+    </div>
+  </div>
+  <div class="summary" id="summary"></div>
+</div>
+
+<script>
+"use strict";
+const LEVELS=["none","weak","partial","ok"];
+const LEVEL_LABEL={none:"欠落",weak:"脆弱",partial:"一部有効",ok:"有効"};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const LIFE=/死亡|死傷|二次|救助|意識|昏倒|窒息|爆発|火災|延焼/;
+
+const PRESETS={
+  "酸欠：しょう油タンク清掃（救助者の二次災害）": {
+    "industry": "せまい所・閉じた所に入る",
+    "task": "タンク・槽の中に入って清掃する",
+    "topEvent": "発酵槽（しょう油タンク等）の中で酸素濃度が低下（酸欠）",
+    "source": "職場のあんぜんサイト（厚生労働省 労働災害事例） ／ しょう油タンクで酸欠死",
+    "threats": [
+      {
+        "text": "発酵する原液の酵母が酸素を消費していた",
+        "barriers": [
+          {
+            "text": "入る前に酸素のうすさをはかる",
+            "level": "none"
+          },
+          {
+            "text": "入る前に換気する",
+            "level": "none"
+          }
+        ]
+      },
+      {
+        "text": "酸欠の危険場所と気づかず立ち入った",
+        "barriers": [
+          {
+            "text": "酸欠危険場所の事前確認と入槽許可",
+            "level": "none"
+          },
+          {
+            "text": "作業主任者を選び、その役割を果たさせる",
+            "level": "none"
+          }
+        ]
+      }
+    ],
+    "consequences": [
+      {
+        "text": "作業者が酸欠で意識を失い倒れる",
+        "barriers": [
+          {
+            "text": "体につける酸素計＋警報",
+            "level": "none"
+          },
+          {
+            "text": "外で見張る人を必ず置く",
+            "level": "weak"
+          }
+        ]
+      },
+      {
+        "text": "救助に入った人も倒れる（二次災害）",
+        "barriers": [
+          {
+            "text": "ひとりで救助に飛びこまないルール",
+            "level": "none"
+          },
+          {
+            "text": "空気呼吸器を常備する",
+            "level": "none"
+          },
+          {
+            "text": "救助の手順をみんなで練習",
+            "level": "none"
+          }
+        ]
+      }
+    ]
+  },
+  "硫化水素：下水道清掃（3名死亡・二次災害）": {
+    "industry": "せまい所・閉じた所に入る",
+    "task": "マンホール・下水道管の清掃をする",
+    "topEvent": "マンホール内で硫化水素が滞留している",
+    "source": "職場のあんぜんサイト（厚生労働省 労働災害事例） ／ 下水道清掃業における硫化水素中毒",
+    "threats": [
+      {
+        "text": "汚泥の腐敗で硫化水素が発生・底にたまる",
+        "barriers": [
+          {
+            "text": "入孔前にガス濃度をはかる",
+            "level": "weak"
+          },
+          {
+            "text": "底の高さで測る",
+            "level": "none"
+          }
+        ]
+      },
+      {
+        "text": "換気の送風機を止めて入孔した",
+        "barriers": [
+          {
+            "text": "入孔中も換気を止めない",
+            "level": "none"
+          }
+        ]
+      }
+    ],
+    "consequences": [
+      {
+        "text": "高濃度で短時間に昏倒する",
+        "barriers": [
+          {
+            "text": "体につける硫化水素警報器",
+            "level": "none"
+          },
+          {
+            "text": "外の見張り役",
+            "level": "weak"
+          }
+        ]
+      },
+      {
+        "text": "救助に入った人も次々に倒れる（二次災害）",
+        "barriers": [
+          {
+            "text": "ひとりで救助に入らない",
+            "level": "none"
+          },
+          {
+            "text": "空気呼吸器を着けてから救助",
+            "level": "none"
+          }
+        ]
+      }
+    ]
+  },
+  "一酸化炭素：地下室でエンジン機械": {
+    "industry": "屋内・換気のわるい所で揮発・燃焼するものを扱う",
+    "task": "屋内・地下でエンジン式の機械を使う",
+    "topEvent": "地下室・屋内で一酸化炭素（CO）濃度が上がる",
+    "source": "職場のあんぜんサイト（厚生労働省 労働災害事例） ／ 地下室において内燃機関より発生した一酸化炭素による中毒",
+    "threats": [
+      {
+        "text": "自然換気が不十分な所でガソリンエンジンの機械を使った",
+        "barriers": [
+          {
+            "text": "屋内・地下でエンジン式機械を使わない（電動へ）",
+            "level": "none"
+          },
+          {
+            "text": "十分に換気する",
+            "level": "none"
+          }
+        ]
+      },
+      {
+        "text": "排気のCOが室内にたまる（無色・無臭で気づけない）",
+        "barriers": [
+          {
+            "text": "排気を屋外へ出す",
+            "level": "none"
+          },
+          {
+            "text": "CO警報器を置く",
+            "level": "none"
+          }
+        ]
+      }
+    ],
+    "consequences": [
+      {
+        "text": "頭痛・脱力から意識を失う",
+        "barriers": [
+          {
+            "text": "CO警報器で早く気づく",
+            "level": "none"
+          }
+        ]
+      },
+      {
+        "text": "同じ場所の複数人が被災",
+        "barriers": [
+          {
+            "text": "単独作業を避ける",
+            "level": "weak"
+          },
+          {
+            "text": "異常を感じたら即退避する手順",
+            "level": "weak"
+          }
+        ]
+      }
+    ]
+  },
+  "有機溶剤：中古タンク改造で急性中毒": {
+    "industry": "せまい所・閉じた所に入る",
+    "task": "中古タンクの改造・内部作業をする",
+    "topEvent": "タンク内で有機溶剤蒸気の濃度が上がる",
+    "source": "職場のあんぜんサイト（厚生労働省 労働災害事例） ／ タンク内で有機溶剤中毒",
+    "threats": [
+      {
+        "text": "前に入っていた有機溶剤が中古タンクに残っていた",
+        "barriers": [
+          {
+            "text": "使う前に前の中身を確認する",
+            "level": "none"
+          },
+          {
+            "text": "入る前に有機溶剤の濃度も測る（酸素だけでなく）",
+            "level": "none"
+          }
+        ]
+      },
+      {
+        "text": "作業で残留物が撹拌され蒸気が充満した",
+        "barriers": [
+          {
+            "text": "入る前・作業中の換気",
+            "level": "none"
+          }
+        ]
+      }
+    ],
+    "consequences": [
+      {
+        "text": "高濃度の蒸気を吸って急性中毒",
+        "barriers": [
+          {
+            "text": "有機ガス用の呼吸用保護具",
+            "level": "none"
+          },
+          {
+            "text": "監視人の配置",
+            "level": "none"
+          }
+        ]
+      },
+      {
+        "text": "単独作業で発見・救助が遅れる",
+        "barriers": [
+          {
+            "text": "単独作業の禁止",
+            "level": "none"
+          },
+          {
+            "text": "危険有害性の教育",
+            "level": "none"
+          }
+        ]
+      }
+    ]
+  },
+  "引火爆発：室内改装の接着剤蒸気": {
+    "industry": "屋内・換気のわるい所で揮発・燃焼するものを扱う",
+    "task": "室内で引火性の接着剤・溶剤を使う",
+    "topEvent": "室内に引火性蒸気がたまり、爆発範囲に達する",
+    "source": "職場のあんぜんサイト（厚生労働省 労働災害事例） ／ 集合住宅の室内改装工事で、接着剤に含まれていた有機溶剤の蒸気に引火し、爆発",
+    "threats": [
+      {
+        "text": "換気の悪い室内で引火性蒸気を出す接着剤を多用した",
+        "barriers": [
+          {
+            "text": "引火性の低い材料（水性等）に替える",
+            "level": "weak"
+          },
+          {
+            "text": "換気して蒸気をためない",
+            "level": "none"
+          }
+        ]
+      },
+      {
+        "text": "室内に着火源（火気・電気火花・静電気）があった",
+        "barriers": [
+          {
+            "text": "火気・着火源を取り除く",
+            "level": "none"
+          },
+          {
+            "text": "防爆・静電気対策",
+            "level": "none"
+          }
+        ]
+      }
+    ],
+    "consequences": [
+      {
+        "text": "蒸気に着火して引火・爆発",
+        "barriers": [
+          {
+            "text": "換気で燃焼範囲より薄く保つ",
+            "level": "none"
+          },
+          {
+            "text": "可燃性ガス濃度の監視",
+            "level": "none"
+          }
+        ]
+      },
+      {
+        "text": "作業者がやけど・負傷、室内が損壊",
+        "barriers": [
+          {
+            "text": "避難経路の確保と訓練",
+            "level": "weak"
+          }
+        ]
+      }
+    ]
+  },
+  "酸欠：飲料タンクで攪拌機交換": {
+    "industry": "せまい所・閉じた所に入る",
+    "task": "タンク・槽の中に入って設備作業をする",
+    "topEvent": "タンク内で酸素濃度が低下（酸欠）",
+    "source": "職場のあんぜんサイト（厚生労働省 労働災害事例） ／ 飲料製造工程のタンク内で攪拌機の交換作業中、作業者が酸素欠乏により被災",
+    "threats": [
+      {
+        "text": "閉じたタンク内で空気が入れかわらない",
+        "barriers": [
+          {
+            "text": "入る前と作業中に酸素濃度をはかる",
+            "level": "none"
+          },
+          {
+            "text": "連続して換気する",
+            "level": "none"
+          }
+        ]
+      }
+    ],
+    "consequences": [
+      {
+        "text": "攪拌機の交換中に作業者が倒れる",
+        "barriers": [
+          {
+            "text": "体につける酸素計＋警報",
+            "level": "none"
+          },
+          {
+            "text": "外の見張り役",
+            "level": "weak"
+          }
+        ]
+      },
+      {
+        "text": "救助者の二次被災",
+        "barriers": [
+          {
+            "text": "ひとりで入らないルール",
+            "level": "none"
+          },
+          {
+            "text": "空気呼吸器",
+            "level": "none"
+          }
+        ]
+      }
+    ]
+  },
+  "酸欠：地下ピット（雨水の酸化）": {
+    "industry": "せまい所・閉じた所に入る",
+    "task": "地下ピット・くぼみの中で作業する",
+    "topEvent": "地下ピット内で酸素濃度が低下（酸欠）",
+    "source": "職場のあんぜんサイト（厚生労働省 労働災害事例） ／ 地下ピット内における酸素欠乏症",
+    "threats": [
+      {
+        "text": "滞留した雨水などの酸化反応でピット内の酸素が消費された",
+        "barriers": [
+          {
+            "text": "入る前に酸素濃度をはかる",
+            "level": "none"
+          },
+          {
+            "text": "入る前に換気する",
+            "level": "none"
+          }
+        ]
+      }
+    ],
+    "consequences": [
+      {
+        "text": "作業者が酸欠で倒れる",
+        "barriers": [
+          {
+            "text": "体につける酸素計＋警報",
+            "level": "none"
+          },
+          {
+            "text": "外の見張り役",
+            "level": "weak"
+          }
+        ]
+      },
+      {
+        "text": "有効な呼吸用保護具なしで救出に入り二次被災",
+        "barriers": [
+          {
+            "text": "ひとりで救助に入らない",
+            "level": "none"
+          },
+          {
+            "text": "空気呼吸器を着けてから救助",
+            "level": "none"
+          }
+        ]
+      }
+    ]
+  }
+};
+
+let state=null;
+function mkEvent(raw){
+  return {id:uid(),topEvent:raw.topEvent||"（事故事象を入力）",source:raw.source||"",
+    threats:(raw.threats||[]).map(t=>({id:uid(),text:t.text||"",barriers:(t.barriers||[]).map(b=>({id:uid(),text:b.text||"",level:LEVELS.includes(b.level)?b.level:"weak"}))})),
+    consequences:(raw.consequences||[]).map(c=>({id:uid(),text:c.text||"",barriers:(c.barriers||[]).map(b=>({id:uid(),text:b.text||"",level:LEVELS.includes(b.level)?b.level:"weak"}))}))};
+}
+function normalize(raw){
+  let events;
+  if(Array.isArray(raw.events)&&raw.events.length){events=raw.events.map(mkEvent);}
+  else{events=[mkEvent(raw)];}
+  const s={industry:raw.industry||"",task:raw.task||"",notes:raw.notes||"",events,activeId:events[0].id};
+  return s;
+}
+function blankEvent(){return mkEvent({topEvent:"（事故事象を入力）",threats:[{text:"（脅威・原因）",barriers:[{text:"（対策）",level:"weak"}]}],consequences:[{text:"（結果・被害）",barriers:[{text:"（対策）",level:"weak"}]}]});}
+const active=()=>state.events.find(e=>e.id===state.activeId);
+
+const $=id=>document.getElementById(id);
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+function editable(node,get,set,after){
+  node.setAttribute("contenteditable","true");node.spellcheck=false;node.textContent=get();
+  node.addEventListener("blur",()=>{set(node.textContent.trim());if(after)after();});
+  node.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();node.blur();}});
+}
+
+/* tabs */
+function buildTabs(){
+  const bar=$("tabs");bar.innerHTML="";
+  state.events.forEach(ev=>{
+    const t=el("div","tab"+(ev.id===state.activeId?" active":""));
+    t.appendChild(Object.assign(el("span","lbl"),{textContent:ev.topEvent||"（無題）"}));
+    if(state.events.length>1){
+      const x=el("span","x","×");
+      x.addEventListener("click",e=>{e.stopPropagation();if(confirm("この事象タブを削除しますか？")){state.events=state.events.filter(z=>z.id!==ev.id);if(state.activeId===ev.id)state.activeId=state.events[0].id;render();}});
+      t.appendChild(x);
+    }
+    t.addEventListener("click",()=>{state.activeId=ev.id;render();});
+    bar.appendChild(t);
+  });
+  const add=el("div","tab add","＋ 事象を追加");
+  add.addEventListener("click",()=>{const e=blankEvent();state.events.push(e);state.activeId=e.id;render();});
+  bar.appendChild(add);
+}
+
+function barrierEl(barrier,owner){
+  const b=el("div","barrier lvl-"+barrier.level);
+  b.appendChild(Object.assign(el("span","tag"),{textContent:"対策"}));
+  const txt=el("div");editable(txt,()=>barrier.text,v=>{barrier.text=v;});b.appendChild(txt);
+  const lvl=el("div","lvl",LEVEL_LABEL[barrier.level]);
+  lvl.title="クリックで信頼度を切替（有効→一部有効→脆弱→欠落）";
+  lvl.addEventListener("click",()=>{const i=LEVELS.indexOf(barrier.level);barrier.level=LEVELS[(i+3)%4];render();});
+  b.appendChild(lvl);
+  const del=el("div","del","×");del.title="この対策を削除";
+  del.addEventListener("click",()=>{owner.barriers=owner.barriers.filter(x=>x.id!==barrier.id);render();});
+  b.appendChild(del);
+  return b;
+}
+function connEl(onAdd){
+  const c=el("div","conn");c.appendChild(el("div","arrow"));
+  const add=el("div","add","＋");add.title="ここに対策を追加";
+  add.addEventListener("click",onAdd);c.appendChild(add);return c;
+}
+function nodeEl(item,kind){
+  const n=el("div","node");
+  n.appendChild(Object.assign(el("span","tag"),{textContent:kind==="threat"?"脅威":"結果"}));
+  const t=el("div");editable(t,()=>item.text,v=>{item.text=v;});n.appendChild(t);
+  const del=el("div","del","×");del.title="この行を削除";
+  del.addEventListener("click",()=>{const ev=active();if(kind==="threat")ev.threats=ev.threats.filter(x=>x.id!==item.id);else ev.consequences=ev.consequences.filter(x=>x.id!==item.id);render();});
+  n.appendChild(del);return n;
+}
+function buildSide(side,list,kind){
+  side.innerHTML="";
+  list.forEach(item=>{
+    const row=el("div","row");
+    const node=nodeEl(item,kind);
+    const segs=[];
+    // leading connector (insert at 0) — for cons this connects from event
+    segs.push(connEl(()=>{item.barriers.splice(0,0,{id:uid(),text:"（対策）",level:"weak"});render();}));
+    item.barriers.forEach((bar,idx)=>{
+      segs.push(barrierEl(bar,item));
+      segs.push(connEl(()=>{item.barriers.splice(idx+1,0,{id:uid(),text:"（対策）",level:"weak"});render();}));
+    });
+    if(kind==="threat"){row.appendChild(node);segs.forEach(s=>row.appendChild(s));}
+    else{segs.forEach(s=>row.appendChild(s));row.appendChild(node);}
+    side.appendChild(row);
+  });
+  const add=el("div","addrow",kind==="threat"?"＋ 脅威・原因を追加":"＋ 結果・被害を追加");
+  add.addEventListener("click",()=>{const ev=active();const obj={id:uid(),text:kind==="threat"?"（脅威・原因）":"（結果・被害）",barriers:[{id:uid(),text:"（対策）",level:"weak"}]};if(kind==="threat")ev.threats.push(obj);else ev.consequences.push(obj);render();});
+  side.appendChild(add);
+}
+function buildCenter(){
+  const c=$("centerCol");c.innerHTML="";
+  const ev=el("div","event");
+  ev.appendChild(Object.assign(el("span","tag"),{textContent:"事故事象"}));
+  const t=el("div");editable(t,()=>active().topEvent,v=>{active().topEvent=v;},()=>buildTabs());
+  ev.appendChild(t);c.appendChild(ev);
+}
+
+function drawLinks(){
+  const svg=$("links"),canvas=$("canvas");const cr=canvas.getBoundingClientRect();
+  svg.setAttribute("width",cr.width);svg.setAttribute("height",cr.height);svg.innerHTML="";
+  const evb=$("centerCol").querySelector(".event");if(!evb)return;
+  const er=evb.getBoundingClientRect();
+  const evL={x:er.left-cr.left,y:er.top-cr.top+er.height/2};
+  const evR={x:er.right-cr.left,y:er.top-cr.top+er.height/2};
+  const mk=(x1,y1,x2,y2)=>{
+    const p=document.createElementNS("http://www.w3.org/2000/svg","path");const mx=(x1+x2)/2;
+    p.setAttribute("d",`M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`);
+    p.setAttribute("fill","none");p.setAttribute("stroke","#11161d");p.setAttribute("stroke-width","2");svg.appendChild(p);
+    const a=document.createElementNS("http://www.w3.org/2000/svg","path");
+    a.setAttribute("d",`M ${x2} ${y2} l -8 -5 l 0 10 z`);a.setAttribute("fill","#11161d");svg.appendChild(a);
+  };
+  $("leftSide").querySelectorAll(".row").forEach(row=>{
+    const conns=row.querySelectorAll(".conn");if(!conns.length)return;
+    const last=conns[conns.length-1].getBoundingClientRect();
+    mk(last.right-cr.left,last.top-cr.top+last.height/2,evL.x,evL.y);
+  });
+  $("rightSide").querySelectorAll(".row").forEach(row=>{
+    const conns=row.querySelectorAll(".conn");if(!conns.length)return;
+    const first=conns[0].getBoundingClientRect();
+    mk(evR.x,evR.y,first.left-cr.left,first.top-cr.top+first.height/2);
+  });
+}
+
+function buildSummary(){
+  const ev=active();const s=$("summary");s.innerHTML="";
+  s.appendChild(Object.assign(el("h3"),{textContent:"脆弱性サマリー（表示中の事象）"}));
+  s.appendChild(Object.assign(el("div","sub"),{textContent:"この事象が起きたと仮定したとき、どの対策が頼りにならないか／そもそも無いかを洗い出します。リスクの「点数」は出しません。"}));
+  const list=el("div","gaplist");const items=[];
+  const scan=(arr,kind)=>{arr.forEach(item=>{
+    if(item.barriers.length===0)items.push({sev:"bare",badge:"対策なし",text:`「${item.text}」に対策が1つもありません`,where:kind==="threat"?"予防側":"軽減側"});
+    item.barriers.forEach(b=>{
+      if(b.level==="none")items.push({sev:"none",badge:"欠落",text:b.text,where:`${kind==="threat"?"予防":"軽減"}：${item.text}`});
+      else if(b.level==="weak")items.push({sev:"weak",badge:"脆弱",text:b.text,where:`${kind==="threat"?"予防":"軽減"}：${item.text}`});
+    });});};
+  scan(ev.threats,"threat");scan(ev.consequences,"cons");
+  const order={bare:0,none:1,weak:2};items.sort((a,b)=>order[a.sev]-order[b.sev]);
+  if(items.length===0)list.appendChild(Object.assign(el("div","allgood"),{textContent:"✓ 欠落・脆弱な対策は見つかりませんでした（各対策の信頼度を見直してみてください）"}));
+  else items.forEach(it=>{const r=el("div","gapitem sev-"+it.sev);r.appendChild(Object.assign(el("span","badge b-"+it.sev),{textContent:it.badge}));const b=el("div");b.appendChild(Object.assign(el("div"),{textContent:it.text}));b.appendChild(Object.assign(el("div","where"),{textContent:it.where}));r.appendChild(b);list.appendChild(r);});
+  s.appendChild(list);
+
+  // priority suggestions (rule-based)
+  const prios=[];
+  ev.threats.forEach(t=>{if(t.barriers.length===0)prios.push({p:1,t:`予防側「${t.text}」に対策が無い。まず1つ歯止めを置けないか。`});});
+  ev.consequences.forEach(c=>{if(c.barriers.length===0)prios.push({p:LIFE.test(c.text)?0:1,t:`「${c.text}」を食い止める対策が無い。${LIFE.test(c.text)?"人命に直結、最優先。":""}`});});
+  ev.consequences.forEach(c=>c.barriers.forEach(b=>{if(b.level==="none")prios.push({p:LIFE.test(c.text)?0:2,t:`軽減対策「${b.text}」が欠落（${c.text}）。${LIFE.test(c.text)?"被害拡大に直結。":""}`});}));
+  ev.threats.forEach(t=>t.barriers.forEach(b=>{if(b.level==="none")prios.push({p:2,t:`予防対策「${b.text}」が欠落（${t.text}）。発生そのものを防ぐ層。`});}));
+  [...ev.threats,...ev.consequences].forEach(x=>x.barriers.forEach(b=>{if(b.level==="weak")prios.push({p:3,t:`「${b.text}」が脆弱。実効性を上げる余地。`});}));
+  prios.sort((a,b)=>a.p-b.p);
+  const pdiv=el("div","prio");
+  pdiv.appendChild(Object.assign(el("h4"),{textContent:"次に手を打つべきポイント（自動抽出・上位）"}));
+  if(prios.length===0)pdiv.appendChild(Object.assign(el("div",null,"特に優先指摘はありません。"),{}));
+  else{const ol=el("ol");prios.slice(0,7).forEach(p=>ol.appendChild(Object.assign(el("li"),{textContent:p.t})));pdiv.appendChild(ol);}
+  const disc=el("div","disc");
+  disc.textContent="※この優先順位は入力内容から機械的に並べた“目安”です（ロジックによる自動抽出であり、AIや専門家の判断ではありません）。最終的な対策の要否・優先度は必ず人が現場の文脈で判断してください。";
+  pdiv.appendChild(disc);
+  s.appendChild(pdiv);
+
+  const c={bare:items.filter(i=>i.sev==="bare").length,none:items.filter(i=>i.sev==="none").length,weak:items.filter(i=>i.sev==="weak").length};
+  const note=el("div","note");
+  note.innerHTML=`指摘：<b>対策なし ${c.bare}</b> ／ <b>欠落 ${c.none}</b> ／ <b>脆弱 ${c.weak}</b>。<br>※プリセットは代表的な災害パターンをもとにした<b>ひな型</b>で、特定の公開事例を引用したものではありません。<br>※「対策（バリア）」は安全工学のボウタイ／LOPAでいう防護層・安全障壁にあたります。`;
+  s.appendChild(note);
+}
+
+let raf=null;
+function render(){
+  buildTabs();buildCenter();
+  buildSide($("leftSide"),active().threats,"threat");
+  buildSide($("rightSide"),active().consequences,"cons");
+  buildSummary();
+  $("m-industry").value=state.industry;$("m-task").value=state.task;$("m-notes").value=state.notes;$("src").value=active().source||"";
+  cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>requestAnimationFrame(drawLinks));
+}
+
+function initPresets(){
+  const sel=$("preset");
+  Object.keys(PRESETS).forEach(k=>{const o=el("option",null,k);o.value=k;sel.appendChild(o);});
+  sel.addEventListener("change",()=>{
+    if(!sel.value)return;const p=PRESETS[sel.value];const e=mkEvent(p);
+    state.events.push(e);state.activeId=e.id;
+    if(!state.industry)state.industry=p.industry||"";if(!state.task)state.task=p.task||"";
+    sel.value="";render();
+  });
+}
+$("newBtn").addEventListener("click",()=>{if(confirm("内容をすべてクリアして新規作成しますか？")){state=normalize({events:[blankEvent()]});render();}});
+$("saveBtn").addEventListener("click",()=>{
+  const data={industry:state.industry,task:state.task,notes:state.notes,
+    events:state.events.map(ev=>({topEvent:ev.topEvent,source:ev.source,
+      threats:ev.threats.map(t=>({text:t.text,barriers:t.barriers.map(b=>({text:b.text,level:b.level}))})),
+      consequences:ev.consequences.map(c=>({text:c.text,barriers:c.barriers.map(b=>({text:b.text,level:b.level}))}))}))};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=el("a");a.href=URL.createObjectURL(blob);a.download=(state.task||"scenario-map")+".json";a.click();URL.revokeObjectURL(a.href);
+});
+$("loadBtn").addEventListener("click",()=>$("fileInput").click());
+$("fileInput").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=normalize(JSON.parse(r.result));render();}catch(err){alert("読み込めませんでした："+err.message);}};r.readAsText(f);e.target.value="";});
+$("printBtn").addEventListener("click",()=>window.print());
+["industry","task","notes"].forEach(k=>$("m-"+k).addEventListener("input",e=>{state[k]=e.target.value;}));
+$("src").addEventListener("input",e=>{active().source=e.target.value;});
+window.addEventListener("resize",()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(drawLinks);});
+
+state=normalize(PRESETS["酸欠：しょう油タンク清掃（救助者の二次災害）"]);
+initPresets();render();
+</script>
+</body>
+</html>

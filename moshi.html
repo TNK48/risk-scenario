@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>もしもチェッカー｜かんたん事故シナリオメーカー</title>
+<style>
+  :root{
+    --ink:#1a2230; --bg:#eef2f6; --card:#ffffff; --line:#dde3ea;
+    --teal:#0e8f86; --teal-d:#0b6f68; --amber:#e8902a; --red:#d6493b; --green:#2f9e57;
+    --muted:#6a7585; font-synthesis:none;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;min-height:100%;}
+  body{background:var(--bg);color:var(--ink);font-family:"Hiragino Kaku Gothic ProN","Yu Gothic Medium","Yu Gothic","Noto Sans JP",Meiryo,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5;}
+  .wrap{max-width:560px;margin:0 auto;padding:0 14px 90px;}
+  header{background:var(--teal);color:#fff;padding:16px 18px;border-radius:0 0 18px 18px;box-shadow:0 4px 14px rgba(14,143,134,.25);}
+  header h1{margin:0;font-size:18px;letter-spacing:.02em;}
+  header p{margin:3px 0 0;font-size:12px;opacity:.92;}
+  .scope{background:#dff1ef;color:var(--teal-d);font-size:11.5px;border-radius:10px;padding:9px 12px;margin:14px 4px 2px;line-height:1.5;}
+  .scope b{color:var(--ink);}
+
+  .steps{display:flex;gap:5px;margin:14px 4px 6px;}
+  .steps .dot{flex:1;height:6px;border-radius:3px;background:#cfd8e2;transition:.25s;}
+  .steps .dot.on{background:var(--teal);} .steps .dot.done{background:var(--teal-d);}
+  .stepname{font-size:12px;color:var(--muted);margin:0 4px 10px;font-weight:700;letter-spacing:.04em;}
+
+  .q{font-size:18px;font-weight:700;margin:6px 4px 14px;line-height:1.4;}
+  .q small{display:block;font-size:12.5px;font-weight:400;color:var(--muted);margin-top:4px;}
+
+  .opt{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:15px 16px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:12px;font-size:15px;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+  .opt:hover{border-color:var(--teal);}
+  .opt.sel{border-color:var(--teal);background:#e9f6f4;box-shadow:0 2px 8px rgba(14,143,134,.18);}
+  .opt .ic{width:40px;height:40px;border-radius:11px;background:#e6eff6;flex:0 0 40px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+  .opt .tx{flex:1;} .opt .tx b{display:block;} .opt .tx span{font-size:12px;color:var(--muted);}
+  .opt .ck{width:22px;height:22px;border-radius:50%;border:2px solid #c4ccd6;flex:0 0 22px;}
+  .opt.sel .ck{border-color:var(--teal);background:var(--teal);position:relative;}
+  .opt.sel .ck:after{content:"✓";color:#fff;font-size:13px;position:absolute;inset:0;text-align:center;line-height:18px;}
+
+  .free{margin:6px 0 4px;}
+  .free label{font-size:13px;color:var(--muted);font-weight:700;}
+  .freebox{display:flex;gap:8px;margin-top:7px;}
+  .freebox input{flex:1;border:1.5px solid var(--line);border-radius:12px;padding:12px 13px;font-size:15px;font-family:inherit;}
+  .freebox input:focus{outline:none;border-color:var(--teal);}
+  .freebox button{border:none;background:var(--teal);color:#fff;border-radius:12px;padding:0 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .ailabel{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--teal-d);background:#dff1ef;border-radius:20px;padding:3px 9px;margin-top:7px;}
+  .thinking{font-size:13px;color:var(--muted);margin-top:8px;}
+
+  .mblock{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:12px;}
+  .mblock .head{font-size:14px;font-weight:700;margin-bottom:3px;}
+  .mblock .sub{font-size:11.5px;color:var(--muted);margin-bottom:10px;}
+  .measure{padding:9px 0;border-top:1px solid var(--line);} .measure:first-of-type{border-top:none;}
+  .measure .mtx{font-size:14px;margin-bottom:7px;}
+  .stat{display:flex;gap:6px;flex-wrap:wrap;}
+  .stat button{flex:1;min-width:62px;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:7px 4px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--muted);}
+  .stat button.on[data-v=ok]{background:var(--green);border-color:var(--green);color:#fff;}
+  .stat button.on[data-v=partial]{background:#e9b200;border-color:#e9b200;color:#3a2f00;}
+  .stat button.on[data-v=weak]{background:var(--amber);border-color:var(--amber);color:#fff;}
+  .stat button.on[data-v=none]{background:var(--red);border-color:var(--red);color:#fff;}
+  .measure .rm{font-size:11px;color:#b0b8c2;cursor:pointer;float:right;} .measure .rm:hover{color:var(--red);}
+
+  .nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:11px 14px;display:flex;justify-content:center;box-shadow:0 -3px 12px rgba(0,0,0,.06);}
+  .nav .inner{max-width:560px;width:100%;display:flex;gap:10px;}
+  .nav button{flex:1;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;border:none;}
+  .nav .back{flex:0 0 88px;background:#eef2f6;color:var(--muted);}
+  .nav .next{background:var(--teal);color:#fff;}
+  .nav .next:disabled{background:#bcd6d3;cursor:not-allowed;}
+
+  .result h2{font-size:19px;margin:6px 4px 4px;}
+  .result .lead{font-size:13px;color:var(--muted);margin:0 4px 16px;}
+  .gap{background:var(--card);border-radius:14px;border-left:6px solid var(--line);padding:13px 15px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .gap.crit{border-left-color:var(--red);} .gap.warn{border-left-color:var(--amber);}
+  .gap .tagrow{display:flex;gap:8px;align-items:center;margin-bottom:5px;}
+  .gap .lvtag{font-size:10.5px;font-weight:700;color:#fff;border-radius:5px;padding:2px 8px;}
+  .gap.crit .lvtag{background:var(--red);} .gap.warn .lvtag{background:var(--amber);}
+  .gap .where{font-size:11px;color:var(--muted);} .gap .what{font-size:15px;font-weight:700;}
+  .okmsg{background:#e9f7ef;border-radius:14px;padding:16px;color:var(--green);font-weight:700;text-align:center;}
+  .disc{font-size:11.5px;color:#9a5a1e;background:#fdf3e8;border:1px solid #f1d7b6;border-radius:10px;padding:11px 13px;margin:14px 0;line-height:1.55;}
+  .resbtns{display:flex;flex-direction:column;gap:9px;margin-top:8px;}
+  .resbtns button{border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid var(--teal);background:#fff;color:var(--teal-d);}
+  .resbtns button.solid{background:var(--teal);color:#fff;border-color:var(--teal);}
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html" style="color:#fff;opacity:.85;font-size:12px;text-decoration:none;">← 入口</a>
+  <h1 style="margin-top:3px;">もしもチェッカー</h1>
+  <p>かんたん事故シナリオメーカー｜場面をえらぶだけで、現場の「あぶないところ」が見えます</p>
+</header>
+<div class="wrap">
+  <div class="scope" id="scope">この道具は<b>「急に起こる事故・労災」</b>を場面から考えるためのものです。<br>毎日の化学物質のばく露量を見積もる作業には、CREATE-SIMPLE が向いています。</div>
+  <div class="steps" id="steps"></div>
+  <div class="stepname" id="stepname"></div>
+  <div id="screen"></div>
+</div>
+<div class="nav"><div class="inner">
+  <button class="back" id="backBtn">もどる</button>
+  <button class="next" id="nextBtn">つぎへ</button>
+</div></div>
+
+<script>
+"use strict";
+const EVENTS={
+  "oxygen": {
+    "label": "酸素がうすくなって倒れる（酸欠）",
+    "threats": [
+      {
+        "cause": "窒素などで満たした後、空気がもどっていない",
+        "measures": [
+          "入る前に酸素のうすさをはかる",
+          "しっかり換気してから入る",
+          "「入ってよい」と確認する許可ルール"
+        ]
+      },
+      {
+        "cause": "発酵する原液（酒・しょう油など）の酵母が酸素を吸う",
+        "measures": [
+          "入る前に酸素のうすさをはかる",
+          "入る前に換気する",
+          "酸欠危険場所として作業主任者を選ぶ"
+        ]
+      },
+      {
+        "cause": "サビ・雨水などの酸化で酸素が消費される",
+        "measures": [
+          "作業前にあぶなさを見積もる",
+          "作業中ずっと換気を回す"
+        ]
+      }
+    ],
+    "mitig": [
+      {
+        "outcome": "作業者が数十秒で意識を失って倒れる",
+        "measures": [
+          "体につける酸素計＋警報",
+          "外で見張る人を必ず置く"
+        ]
+      },
+      {
+        "outcome": "助けに入った人も倒れる（二次災害）",
+        "measures": [
+          "ひとりで助けに飛びこまないルール",
+          "空気ボンベ（呼吸器）を備える",
+          "救助の手順をみんなで練習"
+        ]
+      }
+    ]
+  },
+  "h2s": {
+    "label": "硫化水素（くさい有毒ガス）を吸ってしまう",
+    "threats": [
+      {
+        "cause": "汚泥がくさってガスが出る",
+        "measures": [
+          "入る前にガス濃度をはかる",
+          "強制的に換気する"
+        ]
+      },
+      {
+        "cause": "ガスが空気より重く、底にたまる",
+        "measures": [
+          "底の高さでガスをはかる",
+          "たまった場所を狙って換気する"
+        ]
+      },
+      {
+        "cause": "換気の送風機を止めて中に入った",
+        "measures": [
+          "入っている間も換気を止めない"
+        ]
+      }
+    ],
+    "mitig": [
+      {
+        "outcome": "高い濃度だと一瞬で鼻がきかなくなり、すぐ倒れる",
+        "measures": [
+          "体につけるガス警報器",
+          "外で見張る人"
+        ]
+      },
+      {
+        "outcome": "助けに入った人も次々に倒れる（二次災害）",
+        "measures": [
+          "ひとりで入らないルール",
+          "空気ボンベ（呼吸器）を着けてから救助"
+        ]
+      }
+    ]
+  },
+  "co": {
+    "label": "一酸化炭素（においのない毒ガス）を吸ってしまう",
+    "threats": [
+      {
+        "cause": "換気のわるい屋内・地下でエンジン式の機械を使う",
+        "measures": [
+          "屋内・地下でエンジン式機械を使わない（電動へ）",
+          "しっかり換気する"
+        ]
+      },
+      {
+        "cause": "排気が室内にたまる（COは目にも鼻にもわからない）",
+        "measures": [
+          "排気を屋外に出す",
+          "CO（一酸化炭素）警報器を置く"
+        ]
+      }
+    ],
+    "mitig": [
+      {
+        "outcome": "頭痛・脱力から意識がもうろうとする",
+        "measures": [
+          "CO警報器で早く気づく"
+        ]
+      },
+      {
+        "outcome": "その場の複数人が同時に倒れる",
+        "measures": [
+          "ひとり作業を避ける",
+          "異常を感じたら即退避する手順"
+        ]
+      }
+    ]
+  },
+  "solvent": {
+    "label": "シンナーなどの溶剤蒸気で気分が悪くなる・中毒",
+    "threats": [
+      {
+        "cause": "換気のわるい場所で塗る・洗う",
+        "measures": [
+          "手元の蒸気を吸いとる装置（局所排気）",
+          "部屋全体の換気"
+        ]
+      },
+      {
+        "cause": "フタを開けっぱなし・たくさん使う",
+        "measures": [
+          "使うときだけ開ける・小分けにする",
+          "使う量を決めて管理"
+        ]
+      }
+    ],
+    "mitig": [
+      {
+        "outcome": "めまい・頭痛・意識がぼんやりする（急性）",
+        "measures": [
+          "有機ガス用のマスク（保護具）",
+          "どれくらい吸っているか測る"
+        ]
+      }
+    ]
+  },
+  "fire": {
+    "label": "ガスや蒸気に火がついて火災・爆発",
+    "threats": [
+      {
+        "cause": "配管やつなぎ目・容器からガス／蒸気がもれる",
+        "measures": [
+          "定期点検・もれ試験",
+          "もれを知らせるガス検知器"
+        ]
+      },
+      {
+        "cause": "もれたものがたまる（軽いと天井・重いと床）",
+        "measures": [
+          "重さに合わせて検知器を置く",
+          "換気でためない"
+        ]
+      }
+    ],
+    "mitig": [
+      {
+        "outcome": "火気や静電気で着火し、爆発・火災",
+        "measures": [
+          "火花の出ない防爆機器・静電気対策",
+          "火を使う作業の許可制"
+        ]
+      },
+      {
+        "outcome": "作業者がやけど・死傷する",
+        "measures": [
+          "にげ道と避難の練習"
+        ]
+      }
+    ]
+  },
+  "toxicgas": {
+    "label": "中にたまった有毒ガスを吸ってしまう",
+    "threats": [
+      {
+        "cause": "前の作業や中身からガスが残っている",
+        "measures": [
+          "入る前にガスの種類と濃度をはかる",
+          "しっかり換気してから入る"
+        ]
+      }
+    ],
+    "mitig": [
+      {
+        "outcome": "吸って具合がわるくなる・倒れる",
+        "measures": [
+          "体につけるガス警報器",
+          "外の見張り役"
+        ]
+      },
+      {
+        "outcome": "助けに入った人も被災",
+        "measures": [
+          "ひとりで入らない",
+          "空気ボンベを備える"
+        ]
+      }
+    ]
+  }
+};
+const WORKS={
+  tank:{label:"タンク・槽の中に入って作業する",icon:"🛢️",events:["oxygen","toxicgas","h2s"]},
+  manhole:{label:"マンホール・ピット・汚水槽に入る",icon:"🕳️",events:["h2s","oxygen"]},
+  paint:{label:"塗装・部品の洗浄（シンナー等を使う）",icon:"🎨",events:["solvent","fire"]},
+  combustion:{label:"屋内でエンジン・ストーブ・発電機を使う",icon:"🔥",events:["co"]},
+  gaspipe:{label:"可燃性ガスの取扱い・配管作業",icon:"⛽",events:["fire"]}
+};
+const SCENES=[
+  {label:"せまい所・閉じた所に入る",icon:"🚪",sub:"タンク・ピット・マンホール・槽の中",works:["tank","manhole"]},
+  {label:"屋内・換気のわるい所で、揮発する／燃やすものを扱う",icon:"🏭",sub:"塗装・洗浄、エンジン・燃焼器具",works:["paint","combustion"]},
+  {label:"燃える・有毒なガスや蒸気を扱う",icon:"⚠️",sub:"可燃性ガス・配管作業など",works:["gaspipe"]},
+  {label:"その他（自由に書く）",icon:"✏️",works:[]}
+];
+const STAT=[{v:"ok",t:"できてる"},{v:"partial",t:"だいたい"},{v:"weak",t:"心もとない"},{v:"none",t:"やってない"}];
+const LIFE=/倒れ|意識|死|二次|爆発|火災|やけど|被災/;
+
+let S={step:0,scene:null,work:null,eventKey:null,eventLabel:null,threats:[],mitig:[]};
+const $=id=>document.getElementById(id);
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;}
+const STEPNAMES=["どんな場面？","その中で何を？","起こりうる事故は？","なぜ起きる？（引き金）","いまの備えは？","結果"];
+const NSTEP=6;
+
+function setSteps(){
+  const s=$("steps");s.innerHTML="";
+  for(let i=0;i<NSTEP;i++)s.appendChild(el("div","dot"+(i<S.step?" done":i===S.step?" on":"")));
+  $("stepname").textContent="STEP "+(S.step+1)+" / "+NSTEP+" ・ "+STEPNAMES[S.step];
+  $("scope").style.display=S.step===0?"block":"none";
+}
+
+function mockSuggest(kind,userText){
+  const t=(userText||"")+" "+(S.eventLabel||"")+" "+(S.work&&S.work.label?S.work.label:"");
+  const has=w=>t.indexOf(w)>=0; let items=[];
+  if(kind==="threat"){
+    if(has("高温")||has("熱")||has("やけど")) items=["高温の物・蒸気に直接ふれる","熱い液体やスチームが噴き出す","防護具なしで近づく"];
+    else if(has("ガス")||has("蒸気")||has("におい")) items=["有害なガス・蒸気が発生／残留している","換気が不十分でたまる","ガスに気づく仕組みがない"];
+    else if(has("粉")||has("ダスト")) items=["粉じんが舞って充満する","静電気や火花などの着火源がある"];
+    else items=["決められた手順が守られていない","事前の確認・測定をしていない","換気・隔離が足りない","異常に気づく仕組みがない","ひとり作業で発見が遅れる"];
+  }else{
+    if(has("高温")||has("熱")) items=["断熱・遮へい／接触の防止","耐熱の保護具","近づく前の温度確認"];
+    else if(has("ガス")||has("蒸気")) items=["換気・局所排気","検知・警報の設置","呼吸用保護具","ひとり作業を避け見張りを置く"];
+    else items=["作業前のリスクの確認","換気・隔離","検知・警報の設置","保護具の使用","ひとり作業を避ける／見張り"];
+  }
+  return {ok:true,mock:true,items:items};
+}
+async function aiSuggest(kind,userText){
+  const ctx=`場面：${S.scene?S.scene.label:"未選択"} ／ 作業：${S.work?S.work.label:"未選択"} ／ 想定する事故：${S.eventLabel||"未選択"}`;
+  const want=kind==="threat"?"その事故が起きる『引き金（脅威・原因）』":"その事故を防ぐ・被害を抑える『手立て（対策）』";
+  const prompt=`あなたは労働安全の専門家です。${ctx}\n利用者がこう書きました：「${userText}」\nこれを踏まえ、${want}を、現場の人にわかる平易な日本語で3〜5個あげてください。\n出力はJSON配列だけ（例：["…","…","…"]）。前置き・説明・コードブロックは不要。`;
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
+    const data=await res.json();
+    const txt=(data.content||[]).filter(i=>i.type==="text").map(i=>i.text).join("\n").replace(/```json|```/g,"").trim();
+    const arr=JSON.parse(txt);
+    if(Array.isArray(arr)&&arr.length)return{ok:true,items:arr.map(String)};
+    throw 0;
+  }catch(e){return mockSuggest(kind,userText);}
+}
+
+function render(){
+  setSteps();const sc=$("screen");sc.innerHTML="";
+  [scScene,scWork,scEvent,scThreats,scMeasures,scResult][S.step](sc);
+  updateNav();
+}
+function updateNav(){
+  $("backBtn").style.visibility=S.step===0?"hidden":"visible";
+  const n=$("nextBtn");
+  if(S.step===5){n.textContent="さいしょに戻る";n.disabled=false;return;}
+  n.textContent="つぎへ";
+  if(S.step===0)n.disabled=!S.scene;
+  else if(S.step===1)n.disabled=!S.work;
+  else if(S.step===2)n.disabled=!S.eventKey&&!S.eventLabel;
+  else if(S.step===3)n.disabled=!S.threats.some(t=>t.selected);
+  else n.disabled=false;
+}
+
+function scScene(sc){
+  sc.appendChild(Object.assign(el("div","q"),{innerHTML:'いま、どんな場面ですか？<small>いちばん近いものを1つ選んでください</small>'}));
+  SCENES.forEach(s=>{
+    const o=el("div","opt"+(S.scene===s?" sel":""));
+    o.innerHTML=`<div class="ic">${s.icon}</div><div class="tx"><b>${s.label}</b>${s.sub?`<span>${s.sub}</span>`:""}</div><div class="ck"></div>`;
+    o.addEventListener("click",()=>{S.scene=s;S.work=null;S.eventKey=null;S.eventLabel=null;S.threats=[];S.mitig=[];render();});
+    sc.appendChild(o);
+  });
+}
+function scWork(sc){
+  sc.appendChild(Object.assign(el("div","q"),{innerHTML:'その中で、何をしていますか？<small>近い作業を1つ。なければ下に書いてください</small>'}));
+  (S.scene.works||[]).forEach(k=>{
+    const w=WORKS[k];const o=el("div","opt"+(S.work===w?" sel":""));
+    o.innerHTML=`<div class="ic">${w.icon}</div><div class="tx"><b>${w.label}</b></div><div class="ck"></div>`;
+    o.addEventListener("click",()=>{S.work=w;S.eventKey=null;S.eventLabel=null;S.threats=[];S.mitig=[];render();});
+    sc.appendChild(o);
+  });
+  const f=el("div","free");f.innerHTML='<label>その他（自由に書く）</label>';
+  const box=el("div","freebox");const inp=el("input");inp.placeholder="例：高温の蒸気を扱う";const btn=el("button","","これにする");
+  box.appendChild(inp);box.appendChild(btn);f.appendChild(box);
+  btn.addEventListener("click",()=>{const v=inp.value.trim();if(!v)return;S.work={label:v,events:[],custom:true};S.eventKey=null;S.eventLabel=null;render();});
+  sc.appendChild(f);
+}
+function prepFromEvent(k){
+  S.threats=EVENTS[k].threats.map(t=>({cause:t.cause,measures:t.measures.map(m=>({text:m,status:"weak"})),selected:false}));
+  S.mitig=EVENTS[k].mitig.map(m=>({outcome:m.outcome,measures:m.measures.map(x=>({text:x,status:"weak"})),selected:true}));
+}
+function scEvent(sc){
+  sc.appendChild(Object.assign(el("div","q"),{innerHTML:'この作業で、起こりうる事故は？<small>あてはまりそうなものを1つ。わからなければ下に書けばAIが考えます</small>'}));
+  const keys=(S.work&&S.work.events&&S.work.events.length)?S.work.events:Object.keys(EVENTS);
+  keys.forEach(k=>{
+    const o=el("div","opt"+(S.eventKey===k?" sel":""));
+    o.innerHTML=`<div class="ic">⚠️</div><div class="tx"><b>${EVENTS[k].label}</b></div><div class="ck"></div>`;
+    o.addEventListener("click",()=>{S.eventKey=k;S.eventLabel=EVENTS[k].label;prepFromEvent(k);render();});
+    sc.appendChild(o);
+  });
+  const f=el("div","free");f.innerHTML='<label>その他（自由に書く）</label>';
+  const box=el("div","freebox");const inp=el("input");inp.placeholder="例：高温物に触れてやけど";const btn=el("button","","追加");
+  box.appendChild(inp);box.appendChild(btn);f.appendChild(box);const out=el("div");f.appendChild(out);
+  btn.addEventListener("click",()=>{const v=inp.value.trim();if(!v)return;
+    S.eventKey=null;S.eventLabel=v;S.threats=[];S.mitig=[{outcome:"被害が出る",measures:[],selected:true}];
+    out.innerHTML='<div class="thinking">AIが引き金を考えています…</div>';
+    aiSuggest("threat",v).then(r=>{S.threats=r.items.map(c=>({cause:c,measures:[],selected:true}));
+      out.innerHTML=`<div class="ailabel">${r.mock?"🔧 デモ用の簡易推定（モック）で引き金を提案":(r.ok?"🤖 AIが引き金を提案しました":"⚠ 接続できないため入力をそのまま使用")}</div>`;updateNav();});
+  });
+  sc.appendChild(f);
+}
+function scThreats(sc){
+  sc.appendChild(Object.assign(el("div","q"),{innerHTML:'なぜ起きると思いますか？<small>あてはまる「引き金」をすべて選んでください（複数OK）</small>'}));
+  S.threats.forEach(t=>{
+    const o=el("div","opt"+(t.selected?" sel":""));
+    o.innerHTML=`<div class="ic">❓</div><div class="tx"><b>${t.cause}</b></div><div class="ck"></div>`;
+    o.addEventListener("click",()=>{t.selected=!t.selected;render();});sc.appendChild(o);
+  });
+  const f=el("div","free");f.innerHTML='<label>ほかにも思いつくこと（自由に書く）</label>';
+  const box=el("div","freebox");const inp=el("input");inp.placeholder="例：急かされて確認を省きがち";const btn=el("button","","AIで追加");
+  box.appendChild(inp);box.appendChild(btn);f.appendChild(box);const out=el("div");f.appendChild(out);
+  btn.addEventListener("click",()=>{const v=inp.value.trim();if(!v)return;out.innerHTML='<div class="thinking">AIが考えています…</div>';
+    aiSuggest("threat",v).then(r=>{r.items.forEach(c=>S.threats.push({cause:c,measures:[],selected:true}));
+      out.innerHTML=`<div class="ailabel">${r.mock?"🔧 デモ用の簡易推定（モック）を追加":(r.ok?"🤖 AIの提案を追加しました":"⚠ オフラインのため入力をそのまま追加")}</div>`;render();});
+  });
+  sc.appendChild(f);
+}
+function statBtns(m){const w=el("div","stat");STAT.forEach(s=>{const b=el("button",m.status===s.v?"on":"",s.t);b.dataset.v=s.v;b.addEventListener("click",()=>{m.status=s.v;render();});w.appendChild(b);});return w;}
+function measureRow(m,owner){const d=el("div","measure");const rm=el("span","rm","削除");rm.addEventListener("click",()=>{owner.measures=owner.measures.filter(x=>x!==m);render();});d.appendChild(rm);d.appendChild(Object.assign(el("div","mtx"),{textContent:m.text}));d.appendChild(statBtns(m));return d;}
+function freeMeasure(owner){const box=el("div","freebox");box.style.marginTop="9px";const inp=el("input");inp.placeholder="ほかの手立てを書く";inp.style.fontSize="14px";const btn=el("button","","追加");box.appendChild(inp);box.appendChild(btn);btn.addEventListener("click",()=>{const v=inp.value.trim();if(!v)return;owner.measures.push({text:v,status:"weak"});render();});return box;}
+function scMeasures(sc){
+  sc.appendChild(Object.assign(el("div","q"),{innerHTML:'いまの備えは？<small>それぞれ「どれくらいできているか」をタップしてください</small>'}));
+  S.threats.filter(t=>t.selected).forEach(t=>{
+    const blk=el("div","mblock");
+    blk.appendChild(Object.assign(el("div","head"),{textContent:"防ぐ：「"+t.cause+"」に対して"}));
+    blk.appendChild(Object.assign(el("div","sub"),{textContent:"起こさないための手立て"}));
+    if(!t.measures.length)blk.appendChild(Object.assign(el("div","sub"),{textContent:"（候補がありません。下から手立てを追加できます）"}));
+    t.measures.forEach(m=>blk.appendChild(measureRow(m,t)));blk.appendChild(freeMeasure(t));sc.appendChild(blk);
+  });
+  S.mitig.forEach(mt=>{
+    const blk=el("div","mblock");
+    blk.appendChild(Object.assign(el("div","head"),{textContent:"食い止める：「"+mt.outcome+"」を防ぐ"}));
+    blk.appendChild(Object.assign(el("div","sub"),{textContent:"起きても被害を抑える手立て"}));
+    mt.measures.forEach(m=>blk.appendChild(measureRow(m,mt)));blk.appendChild(freeMeasure(mt));sc.appendChild(blk);
+  });
+}
+function scResult(sc){
+  const r=el("div","result");
+  r.appendChild(Object.assign(el("h2"),{textContent:"あなたの現場で「手薄なところ」"}));
+  r.appendChild(Object.assign(el("div","lead"),{textContent:(S.eventLabel||"")+"　について、備えが足りていない順にならべました。"}));
+  const gaps=[];
+  const collect=(arr,side)=>arr.forEach(o=>{
+    if(side==="prevent"&&!o.selected)return;
+    const where=side==="prevent"?("引き金："+o.cause):("被害："+o.outcome);
+    if(o.measures.length===0&&side!=="prevent")gaps.push({sev:LIFE.test(o.outcome)?0:1,crit:LIFE.test(o.outcome),what:"この被害を食い止める手立てがない",where});
+    o.measures.forEach(m=>{
+      if(m.status==="none")gaps.push({sev:(side!=="prevent"&&LIFE.test(o.outcome))?0:1,crit:true,lv:"やってない",what:m.text,where});
+      else if(m.status==="weak")gaps.push({sev:2,crit:false,lv:"心もとない",what:m.text,where});
+    });
+  });
+  collect(S.threats,"prevent");collect(S.mitig,"mitig");
+  gaps.sort((a,b)=>a.sev-b.sev);
+  if(!gaps.length)r.appendChild(Object.assign(el("div","okmsg"),{textContent:"✓ 大きな抜けは見つかりませんでした。よく備えられています。"}));
+  else gaps.forEach(g=>{const d=el("div","gap "+(g.crit?"crit":"warn"));const tr=el("div","tagrow");if(g.lv)tr.appendChild(Object.assign(el("span","lvtag"),{textContent:g.lv}));tr.appendChild(Object.assign(el("span","where"),{textContent:g.where}));d.appendChild(tr);d.appendChild(Object.assign(el("div","what"),{textContent:g.what}));r.appendChild(d);});
+  const disc=el("div","disc");disc.textContent="※これは「考えるきっかけ」をつくる簡易チェックで、完全なリスクアセスメントではありません。自由記述からの提案はAIによる推定で、誤りを含むことがあります。最終的な判断は現場をよく知る人が行ってください。";
+  r.appendChild(disc);
+  const btns=el("div","resbtns");
+  const b1=el("button","solid","この内容を保存（詳細版で開ける）");b1.addEventListener("click",saveJSON);
+  const b2=el("button","","別の事故も調べる");b2.addEventListener("click",()=>{S.step=2;S.eventKey=null;S.eventLabel=null;S.threats=[];S.mitig=[];render();});
+  btns.appendChild(b1);btns.appendChild(b2);r.appendChild(btns);
+  sc.appendChild(r);
+}
+function saveJSON(){
+  const ev={topEvent:S.eventLabel,source:"ガイドモード（"+(S.scene?S.scene.label:"")+"／"+(S.work?S.work.label:"")+"）",
+    threats:S.threats.filter(t=>t.selected).map(t=>({text:t.cause,barriers:t.measures.map(m=>({text:m.text,level:m.status}))})),
+    consequences:S.mitig.map(m=>({text:m.outcome,barriers:m.measures.map(x=>({text:x.text,level:x.status}))}))};
+  const data={industry:"",task:S.work?S.work.label:"",notes:"",events:[ev]};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=el("a");a.href=URL.createObjectURL(blob);a.download=(S.eventLabel||"scenario")+".json";a.click();URL.revokeObjectURL(a.href);
+}
+$("backBtn").addEventListener("click",()=>{if(S.step>0){S.step--;render();}});
+$("nextBtn").addEventListener("click",()=>{
+  if(S.step===5){S={step:0,scene:null,work:null,eventKey:null,eventLabel:null,threats:[],mitig:[]};render();return;}
+  S.step++;render();
+});
+render();
+</script>
+</body>
+</html>
